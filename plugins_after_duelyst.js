@@ -16,7 +16,22 @@ console.info("running custom script");
 		//
 		//SDK.PlayModeFactory.playModes.sandbox.isHiddenInUI = false;
 		
-		//
+		/****************************************************
+		******************** Check if there is a new addon pack version
+		*****************************************************/
+		!c.plugins.active.disable_version_check && (function(){
+			$.getJSON("http://5133418.swh.strato-hosting.eu/_JOSCH/duelyst_addons_current_version/version.json", function(data) {
+				if(data.josch_addons_version_iterative > c.plugins.iVERSION)
+					NotificationsManager.instance.showNotification(new Backbone.Model({
+						message: "There is a newer verion of Josch's Plugin Scripts // Your version: "+c.plugins.VERSION+" // Newer Version: "+data.josch_addons_version, 
+						type: "buddy_invite"
+					}));
+			});
+		}());
+		
+		/****************************************************
+		******************** add some custom css
+		*****************************************************/
 		$("<style type='text/css'> .ingame_infobox {position:relative;top:40%;color:white;text-align:right;background-color:black;opacity:0.6;padding-right:8px;width:205px;margin-top:2px;float:right;clear:right;margin-right:4px;pointer-events:auto;}</style>").appendTo("head");
 
 		/****************************************************
@@ -42,20 +57,23 @@ console.info("running custom script");
 				.appendTo($("#app-game-right-region"));
 				
 			/****************************************************
-			******************** Create the "Special Quest" infobox in DOM
+			******************** Create the "Special Quest" infobox in DOM 
+			TODO these are added regardless the config!
 			*****************************************************/
-			var qs = QuestsManager.instance.dailyQuestsCollection._byId;
+			//var qs = QuestsManager.instance.dailyQuestsCollection._byId;
+			// 20000 = welcome back
+			var qs = QuestsManager.instance.getQuestCollection().models;
 			for(var quest in qs) {
-				if(qs[quest].attributes.quest_type_id == 500) {
+				if((qs[quest].attributes.quest_type_id == 500 || qs[quest].attributes.quest_type_id == 401) && $('#plugin_sqi_box').length === 0) {
 					$(document.createElement('div'))
 						.addClass('ingame_infobox')
 						.attr('id', 'plugin_sqi_box')
 						.appendTo($("#app-game-right-region"));
-						
-						console.info("added SQI BOX");
-						
-					window.custom_plugins.has_aggressor_q = true;
 				}
+				if(qs[quest].attributes.quest_type_id == 500)
+					window.custom_plugins.has_aggressor_q = true;
+				else if(qs[quest].attributes.quest_type_id == 401)
+					window.custom_plugins.has_assassin_q = true;
 			}
 			
 			/****************************************************
@@ -156,16 +174,28 @@ console.info("running custom script");
 				
 			/****************************************************
 			******************** "special quest" infobox
+			TODO this code sucks. Make it beautiful by time
 			*****************************************************/
 			// TODO CAN ONLY COMPLETE QUEST IN PLAY MODE (NOT PRACTICE)
-			c.plugins.active.ig_special_quest_info && (function(){
+			c.plugins.active.ig_special_quest_info && (function(){				
+				if(window.custom_plugins.has_aggressor_q || window.custom_plugins.has_assassin_q){
+					$('#plugin_sqi_box').html('<b style="text-decoration: underline;">Quest Info:</b>');
+				}
+				
 				if(window.custom_plugins.has_aggressor_q){
-					if(internal_gs.players[curr_player_index].isCurrentPlayer) {
-						$('#plugin_sqi_box').html('<b style="text-decoration: underline;">Quest Info:</b><br/>' + 'Ultimate Aggressor: '+internal_gs.players[curr_player_index].totalDamageDealt+"/40");
-					}
-
-					//totalDamageDealt
-					//totalMinionsKilled
+					if(internal_gs.players[curr_player_index].isCurrentPlayer)
+						if(internal_gs.players[curr_player_index].totalDamageDealt >= 40)
+							$('#plugin_sqi_box').append('<div>Ultimate Aggressor: <b color="green">DONE</b>');
+						else
+							$('#plugin_sqi_box').append('<div>Ultimate Aggressor: '+internal_gs.players[curr_player_index].totalDamageDealt+"/40</div>");
+				}
+				
+				if(window.custom_plugins.has_assassin_q){
+					if(internal_gs.players[curr_player_index].isCurrentPlayer)
+						if(internal_gs.players[curr_player_index].totalMinionsKilled >= 5)
+							$('#plugin_sqi_box').append('<div>Assassin: <b color="green">DONE</b>');
+						else
+							$('#plugin_sqi_box').append('<div>Assassin: '+internal_gs.players[curr_player_index].totalMinionsKilled+"/5</div>");
 				}
 			}());
 			// 
@@ -239,12 +269,15 @@ console.info("running custom script");
 }({
 	plugins : {
 		active: {
+			disable_version_check	:		false,				// ...
 			expand_battlelog		:		true,				// expands the BL on game start automatically
 			turn_notifier			:		true,				// do you want toaster notifications on the lower right corner when your turn starts and the game is in background?
 			print_turntime_left		:		true,				// ...
 			actions_left_info		:		true,				// ...
 			ig_special_quest_info	:		true				// ...
-		}
+		},
+		VERSION : '0.8.6', 										// Current version of the plugin pack
+		iVERSION : 0
 	}
 }));
 
