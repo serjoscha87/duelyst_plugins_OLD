@@ -18,7 +18,7 @@ window.custom_plugins = {
 };
 
 cc.Class.orig_ccClassExtend = cc.Class.extend; // save original vendor func
-cc.Class.extend = function(t) { // not overwrite it with own stuff (hook)
+cc.Class.extend = function(t) { // now overwrite it with own stuff (hook)
 	var hiddenCMinstance = cc.Class.orig_ccClassExtend.call(this, t); // call the original extend to fetch the later hidden object
 	var tableHash = window.custom_plugins.util.genTableId(t); // table data identification string...
 		//if(t._ui_z_order_high_priority_support_nodes) console.info(hiddenCMinstance); //console.info(tableHash); // for dev: get the hash of a desired table printed to the console NOTE NOTE NOTE NOTE NOTE NOTE NOTE DONT TAKE FIELDS THAT ARE NULL!!!

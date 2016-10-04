@@ -1,12 +1,5 @@
 console.info("running custom script");
 
-
-// ONLINE TIME: ProfileManager.instance.profile.attributes.presence.began
-
-// interessant:
-// this.listenTo(o.GameSession.getInstance().getEventBus(), r.end_turn, this._setSubmitTurnButtonToEnemyState);
-// später mal einen Blick drauf werfen...
-
 (function(c){
 	var orig_setGScreate = SDK.GameSession.create;
 	SDK.GameSession.create = function() {
@@ -54,6 +47,7 @@ console.info("running custom script");
 			$(document.createElement('div'))
 				.addClass('ingame_infobox')
 				.attr('id', 'plugin_ali_box')
+				.draggable()
 				.appendTo($("#app-game-right-region"));
 				
 			/****************************************************
@@ -64,18 +58,18 @@ console.info("running custom script");
 			// 20000 = welcome back
 			var qs = QuestsManager.instance.getQuestCollection().models;
 			for(var quest in qs) {
-				if((qs[quest].attributes.quest_type_id == 500 || qs[quest].attributes.quest_type_id == 401) && $('#plugin_sqi_box').length === 0) {
+				if( (qs[quest].attributes.quest_type_id == 500 || qs[quest].attributes.quest_type_id == 401) && $('#plugin_sqi_box').length === 0 ) {
 					$(document.createElement('div'))
 						.addClass('ingame_infobox')
 						.attr('id', 'plugin_sqi_box')
-						.appendTo($("#app-game-right-region"));
+						.appendTo($("#app-game-right-region")); //  DRAGGABLE
 				}
 				if(qs[quest].attributes.quest_type_id == 500)
 					window.custom_plugins.has_aggressor_q = true;
 				else if(qs[quest].attributes.quest_type_id == 401)
 					window.custom_plugins.has_assassin_q = true;
 			}
-			
+
 			/****************************************************
 			******************** expand the battlelog as soon as possible
 			*****************************************************/
@@ -93,7 +87,8 @@ console.info("running custom script");
 			
 			var internal_gs = this; // GameSession
 			
-			var curr_player_index = (e.playerId == ProfileManager.instance.profile.id ? window.custom_plugins.curr_game_player_index : (window.custom_plugins.curr_game_player_index === 1 ? 0 : 1) ); // << switches every turn
+			//var curr_player_index = (e.playerId == ProfileManager.instance.profile.id ? window.custom_plugins.curr_game_player_index : (window.custom_plugins.curr_game_player_index === 1 ? 0 : 1) ); // << switches every turn
+			var curr_game_player_index = window.custom_plugins.curr_game_player_index;
 			
 			/****************************************************
 			******************** "actions left" infobox
@@ -101,10 +96,10 @@ console.info("running custom script");
 			c.plugins.active.actions_left_info && (function(){
 
 				//var last_play_manaCost = e.action._private.cachedCard.manaCost; // this should be easier to obtain
-				var mana_remaining = internal_gs.players[curr_player_index].getRemainingMana();
+				var mana_remaining = internal_gs.players[curr_game_player_index].getRemainingMana();
 				
 				var can_play_any_card = false;
-				var cachedCards = internal_gs.players[curr_player_index].deck._private.cachedCardsInHandExcludingMissing;
+				var cachedCards = internal_gs.players[curr_game_player_index].deck._private.cachedCardsInHandExcludingMissing;
 				for(var card in cachedCards)
 					if(cachedCards[card].manaCost <= mana_remaining)
 						can_play_any_card = true;
@@ -113,10 +108,10 @@ console.info("running custom script");
 				for(var step in internal_gs.currentTurn.steps)
 					if(internal_gs.currentTurn.steps[step].action.type == "ReplaceCardFromHandAction")
 						did_replace = true;
-				if (!did_replace && internal_gs.players[curr_player_index].deck.hand.filter(function(e){return typeof e=='number'}).length === 0) did_replace = true;
+				if (!did_replace && internal_gs.players[curr_game_player_index].deck.hand.filter(function(e){return typeof e=='number'}).length === 0) did_replace = true;
 				
 				var played_signature = true;
-				if(internal_gs.players[curr_player_index].getSignatureCards().length !== 0 && mana_remaining >=1) { // was even able to play signature this turn?
+				if(internal_gs.players[curr_game_player_index].getSignatureCards().length !== 0 && mana_remaining >=1) { // was even able to play signature this turn?
 					played_signature = false;
 					for(var step in internal_gs.currentTurn.steps) // did play signature?
 						if(internal_gs.currentTurn.steps[step].action.type == "PlaySignatureCardAction")
@@ -174,28 +169,26 @@ console.info("running custom script");
 				
 			/****************************************************
 			******************** "special quest" infobox
-			TODO this code sucks. Make it beautiful by time
 			*****************************************************/
-			// TODO CAN ONLY COMPLETE QUEST IN PLAY MODE (NOT PRACTICE)
-			c.plugins.active.ig_special_quest_info && (function(){				
-				if(window.custom_plugins.has_aggressor_q || window.custom_plugins.has_assassin_q){
-					$('#plugin_sqi_box').html('<b style="text-decoration: underline;">Quest Info:</b>');
-				}
-				
-				if(window.custom_plugins.has_aggressor_q){
-					if(internal_gs.players[curr_player_index].isCurrentPlayer)
-						if(internal_gs.players[curr_player_index].totalDamageDealt >= 40)
+			// TODO beautify that code part!!!
+			c.plugins.active.ig_special_quest_info && (function() {
+				if (internal_gs.gameType === SDK.GameType.Gauntlet || internal_gs.gameType === SDK.GameType.Ranked) {
+					if(window.custom_plugins.has_aggressor_q || window.custom_plugins.has_assassin_q)
+						$('#plugin_sqi_box').html('<b style="text-decoration: underline;">Quest Info:</b>');
+					
+					if(window.custom_plugins.has_aggressor_q){
+						if(internal_gs.players[curr_game_player_index].totalDamageDealt >= 40)
 							$('#plugin_sqi_box').append('<div>Ultimate Aggressor: <b color="green">DONE</b>');
 						else
-							$('#plugin_sqi_box').append('<div>Ultimate Aggressor: '+internal_gs.players[curr_player_index].totalDamageDealt+"/40</div>");
-				}
-				
-				if(window.custom_plugins.has_assassin_q){
-					if(internal_gs.players[curr_player_index].isCurrentPlayer)
-						if(internal_gs.players[curr_player_index].totalMinionsKilled >= 5)
+							$('#plugin_sqi_box').append('<div>Ultimate Aggressor: '+internal_gs.players[curr_game_player_index].totalDamageDealt+"/40</div>");
+					}
+					
+					if(window.custom_plugins.has_assassin_q){
+						if(internal_gs.players[curr_game_player_index].totalMinionsKilled >= 5)
 							$('#plugin_sqi_box').append('<div>Assassin: <b color="green">DONE</b>');
 						else
-							$('#plugin_sqi_box').append('<div>Assassin: '+internal_gs.players[curr_player_index].totalMinionsKilled+"/5</div>");
+							$('#plugin_sqi_box').append('<div>Assassin: '+internal_gs.players[curr_game_player_index].totalMinionsKilled+"/5</div>");
+					}
 				}
 			}());
 			// 
@@ -244,7 +237,7 @@ console.info("running custom script");
 			******************** part of info box: toggle visibility of the box when turns switch between the player and his opponent
 			*****************************************************/
 			myturn ? $('#plugin_ali_box').show() : $('#plugin_ali_box').hide();
-			myturn ? $('#plugin_sqi_box').show() : $('#plugin_sqi_box').hide();
+			//myturn ? $('#plugin_sqi_box').show() : $('#plugin_sqi_box').hide();
 			
 			//
 			return ret;
