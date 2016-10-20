@@ -1,5 +1,7 @@
-# duelyst_plugins
+# duelyst_plugins_OLD
 
-Here you can find my duelyst addons's source code.
+THIS IS A OLD REPO
 
-For (much much) more info see http://5133418.swh.strato-hosting.eu/_JOSCH/DUELYST_API_dokuwiki/doku.php
+GOTO https://github.com/serjoscha87/duelyst_PCS
+
+For (much much) more info (on new releases) see http://duelyst.r4nd0m.org 
